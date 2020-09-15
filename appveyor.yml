@@ -1,0 +1,25 @@
+version: "{build}"
+
+clone_folder: c:\gopath\src\github.com\sbilly\go-windivert2
+
+environment:
+  GOPATH: c:\gopath
+
+platform:
+  - x64
+
+install:
+  - echo %PATH%
+  - echo %GOPATH%
+  - go version
+  - go env
+  - go get -v -t ./...
+
+before_build:
+  - go run tool/downloadDLL.go
+
+build_script:
+  - go build
+
+test_script:
+  - go test -v ./...
