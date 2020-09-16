@@ -27,8 +27,14 @@ const (
 	LayerSocket         = 3
 	LayerReflect        = 4
 
-	FlagSniff = 1
-	FlagDrop  = 2
+	FlagSniff     = 1
+	FlagDrop      = 2
+	FlagRecvOnly  = 4
+	FlagReadOnly  = 4
+	FlagSendOnly  = 8
+	FlagWriteOnly = 8
+	FlagNoInstall = 16
+	FlagFragment  = 32
 
 	DirectionOutbound = 0
 	DirectionInbound  = 1
