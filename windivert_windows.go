@@ -20,8 +20,12 @@ const (
 	false_             = 0
 	InvalidHandleValue = -1
 
+	// https://github.com/basil00/Divert/blob/master/include/windivert.h
 	LayerNetwork        = 0
 	LayerNetworkForward = 1
+	LayerFlow           = 2
+	LayerSocket         = 3
+	LayerReflect        = 4
 
 	FlagSniff = 1
 	FlagDrop  = 2
