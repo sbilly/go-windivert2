@@ -63,6 +63,27 @@ const (
 	InvalidHandleValue = -1
 
 	// https://github.com/basil00/Divert/blob/master/include/windivert.h
+	/*
+	 * WinDivert constants.
+	 */
+	PriorityHighest       = 30000
+	PriorityLowest        = -30000
+	ParamQueueLenDefault  = 4096
+	ParamQueueLenMin      = 32
+	ParamQueueLenMax      = 16384
+	ParamQueueTimeDefault = 2000     /* 2s */
+	ParamQueueTimeMin     = 100      /* 100ms */
+	ParamQueueTimeMax     = 16000    /* 16s */
+	ParamQueueSizeDefault = 4194304  /* 4MB */
+	ParamQueueSizeMin     = 65535    /* 64KB */
+	ParamQueueSizeMax     = 33554432 /* 32MB */
+	BatchMax              = 0xFF     /* 255 */
+	MTUMax                = (40 + 0xFF)
+
+	ParamQueueLen  = 0
+	ParamQueueTime = 1
+	ParamQueueSize = 2
+
 	PacketFlagSniffed     = 1      /* Packet was sniffed? */
 	PacketFlagOutbound    = 1 << 1 /* Packet is outound? */
 	PacketFlagLoopback    = 1 << 2 /* Packet is loop? */
@@ -101,10 +122,6 @@ const (
 
 	DirectionOutbound = 0
 	DirectionInbound  = 1
-
-	ParamQueueLen  = 0
-	ParamQueueTime = 1
-	ParamQueueSize = 2
 
 	ParamMajorVersion = 3
 	ParamMinorVersion = 4
