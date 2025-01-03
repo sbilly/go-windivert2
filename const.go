@@ -8,7 +8,6 @@ const (
 	LayerFlow           Layer = 2
 	LayerSocket         Layer = 3
 	LayerReflect        Layer = 4
-	LayerEthernet       Layer = 5
 )
 
 func (l Layer) String() string {
@@ -23,8 +22,6 @@ func (l Layer) String() string {
 		return "WINDIVERT_LAYER_SOCKET"
 	case LayerReflect:
 		return "WINDIVERT_LAYER_REFLECT"
-	case LayerEthernet:
-		return "WINDIVERT_LAYER_ETHERNET"
 	default:
 		return ""
 	}
@@ -123,21 +120,22 @@ func (p Param) String() string {
 	}
 }
 
+// Flags for WinDivertOpen()
 const (
-	FlagDefault   = 0x0000
-	FlagSniff     = 0x0001
-	FlagDrop      = 0x0002
-	FlagRecvOnly  = 0x0004
-	FlagSendOnly  = 0x0008
-	FlagNoInstall = 0x0010
-	FlagFragments = 0x0020
+	FlagDefault   uint64 = 0
+	FlagSniff     uint64 = 1
+	FlagDrop      uint64 = 2
+	FlagDebug     uint64 = 4
+	FlagRecvOnly  uint64 = 8
+	FlagSendOnly  uint64 = 16
+	FlagNoInstall uint64 = 32
+	FlagFragments uint64 = 64
 )
 
+// Default values
 const (
 	PriorityDefault    = 0
-	PriorityHighest    = 3000
-	PriorityLowest     = -3000
-	QueueLengthDefault = 4096
+	QueueLengthDefault = 512
 	QueueLengthMin     = 32
 	QueueLengthMax     = 16384
 	QueueTimeDefault   = 2000

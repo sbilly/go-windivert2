@@ -15,6 +15,18 @@ import (
 	"github.com/sbilly/go-windivert2/internal/utils"
 )
 
+// Layer represents the WinDivert layer
+type Layer int
+
+const (
+	LayerNetwork        Layer = 0
+	LayerNetworkForward Layer = 1
+	LayerFlow           Layer = 2
+	LayerSocket         Layer = 3
+	LayerReflect        Layer = 4
+)
+
+// Device represents a WinDivert handle
 type Device struct {
 	*Address
 	*io.PipeReader

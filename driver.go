@@ -168,3 +168,30 @@ func RegisterEventSource(sys string) error {
 
 	return nil
 }
+
+// Core functions that map to WinDivert API
+type Driver interface {
+	// Open opens a WinDivert handle
+	// Maps to WinDivertOpen()
+	Open(filter string, layer Layer, priority int16, flags uint64) error
+
+	// Close closes the WinDivert handle
+	// Maps to WinDivertClose()
+	Close() error
+
+	// Recv receives a packet
+	// Maps to WinDivertRecv()
+	Recv(packet []byte) (int, *Address, error)
+
+	// RecvEx receives multiple packets
+	// Maps to WinDivertRecvEx()
+	RecvEx(packets [][]byte) (int, []*Address, error)
+
+	// Send sends a packet
+	// Maps to WinDivertSend()
+	Send(packet []byte, addr *Address) (int, error)
+
+	// SendEx sends multiple packets
+	// Maps to WinDivertSendEx()
+	SendEx(packets [][]byte, addrs []*Address) (int, error)
+}

@@ -58,29 +58,30 @@ func (r *Reflect) Layer() Layer {
 }
 
 type Address struct {
-	Timestamp int64
-	layer     uint8
-	event     uint8
-	Flags     uint8
-	_         uint8
-	length    uint32
-	union     [64]uint8
+	Timestamp   int64
+	Layer       Layer
+	Event       uint8
+	Sniffed     uint8
+	Outbound    uint8
+	IPChecksum  uint8
+	TCPChecksum uint8
+	UDPChecksum uint8
 }
 
 func (a *Address) Layer() Layer {
-	return Layer(a.layer)
+	return a.Layer
 }
 
 func (a *Address) SetLayer(layer Layer) {
-	a.layer = uint8(layer)
+	a.Layer = layer
 }
 
 func (a *Address) Event() Event {
-	return Event(a.event)
+	return Event(a.Event)
 }
 
 func (a *Address) SetEvent(event Event) {
-	a.event = uint8(event)
+	a.Event = uint8(event)
 }
 
 func (a *Address) Sniffed() bool {
@@ -205,4 +206,12 @@ func (a *Address) Flow() *Flow {
 
 func (a *Address) Reflect() *Reflect {
 	return (*Reflect)(unsafe.Pointer(&a.union))
+}
+
+type AddressHelper interface {
+	CalcChecksums(packet []byte, flags uint64) error
+	ParseIPv4Header(packet []byte) (*IPv4Header, error)
+	ParseIPv6Header(packet []byte) (*IPv6Header, error)
+	ParseTCPHeader(packet []byte) (*TCPHeader, error)
+	ParseUDPHeader(packet []byte) (*UDPHeader, error)
 }
