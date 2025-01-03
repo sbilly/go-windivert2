@@ -1,0 +1,11 @@
+[submodule "3rd/WinDivert"]
+	path = 3rd/WinDivert
+	url = https://github.com/basil00/Divert.git
+
+[submodule "3rd/shadow"]
+	path = 3rd/shadow
+	url = https://github.com/imgk/shadow.git
+
+[submodule "3rd/go-windivert"]
+	path = 3rd/go-windivert
+	url = https://github.com/clmul/go-windivert.git
