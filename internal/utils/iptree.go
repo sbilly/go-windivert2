@@ -2,19 +2,19 @@ package utils
 
 // IPTree is a simple IP tree implementation for IP lookup
 type IPTree struct {
-	root *node
+	root *ipNode
 }
 
-type node struct {
-	left   *node
-	right  *node
+type ipNode struct {
+	left   *ipNode
+	right  *ipNode
 	isLeaf bool
 }
 
 // NewIPTree creates a new IP tree
 func NewIPTree() *IPTree {
 	return &IPTree{
-		root: &node{},
+		root: &ipNode{},
 	}
 }
 
@@ -26,12 +26,12 @@ func (t *IPTree) Insert(ip []byte) {
 			bit := (b >> uint(i)) & 1
 			if bit == 0 {
 				if current.left == nil {
-					current.left = &node{}
+					current.left = &ipNode{}
 				}
 				current = current.left
 			} else {
 				if current.right == nil {
-					current.right = &node{}
+					current.right = &ipNode{}
 				}
 				current = current.right
 			}
