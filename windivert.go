@@ -18,7 +18,11 @@ type CtlCode uint32
 
 // IoCtl represents an IO control structure
 type IoCtl struct {
-	// ... fields
+	Code   CtlCode
+	Pkt    uint64
+	Addr   uint64
+	Param  uint32
+	Length uint32
 }
 
 // recv represents a receive operation
