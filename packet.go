@@ -1,5 +1,11 @@
 package windivert
 
+/*
+#include <windows.h>
+#include <windivert.h>
+*/
+import "C"
+
 import (
 	"fmt"
 	"unsafe"

@@ -115,17 +115,17 @@ func RemoveDriver() error {
 func GetDriverFileName() (string, error) {
 	key, err := registry.OpenKey(registry.LOCAL_MACHINE, "System\\CurrentControlSet\\Services\\EventLog\\System\\WinDivert", registry.QUERY_VALUE)
 	if err != nil {
-		if _, err := os.Stat(windivertsys); err != nil {
+		if _, err := os.Stat(WinDivertSys); err != nil {
 			if er := Download(); er != nil {
 				return "", fmt.Errorf("file error: %w, download error: %w", err, er)
 			}
 		}
 
-		if err := RegisterEventSource(windivertsys); err != nil {
+		if err := RegisterEventSource(WinDivertSys); err != nil {
 			return "", err
 		}
 
-		return windivertsys, nil
+		return WinDivertSys, nil
 	}
 	defer key.Close()
 
@@ -135,17 +135,17 @@ func GetDriverFileName() (string, error) {
 	}
 
 	if _, err := os.Stat(val); err != nil {
-		if _, err := os.Stat(windivertsys); err != nil {
+		if _, err := os.Stat(WinDivertSys); err != nil {
 			if er := Download(); er != nil {
 				return "", fmt.Errorf("file error: %w, download error: %w", err, er)
 			}
 		}
 
-		if err := RegisterEventSource(windivertsys); err != nil {
+		if err := RegisterEventSource(WinDivertSys); err != nil {
 			return "", err
 		}
 
-		return windivertsys, nil
+		return WinDivertSys, nil
 	}
 
 	return val, nil

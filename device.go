@@ -10,9 +10,15 @@ import (
 
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
+	"golang.org/x/sys/windows"
 
 	"github.com/sbilly/go-windivert2/internal/iana"
 	"github.com/sbilly/go-windivert2/internal/utils"
+)
+
+var (
+	ErrNoData          = windows.WSAEWOULDBLOCK
+	ErrHostUnreachable = windows.WSAEHOSTUNREACH
 )
 
 // Device represents a WinDivert handle
@@ -116,7 +122,14 @@ func (d *Device) WriteTo(w io.Writer) (n int64, err error) {
 	const f = uint8(0x01<<7) | uint8(0x01<<6) | uint8(0x01<<5) | uint8(0x01<<3)
 
 	for {
-		nr, nx, er := d.Handle.RecvEx(b, a, nil)
+		var (
+			nr, nx uint
+			er     error
+		)
+
+		nr32, nx32, er := d.Handle.RecvEx([][]byte{b}, a[:1], 0)
+		nr = uint(nr32)
+		nx = uint(nx32)
 		if er != nil {
 			select {
 			case <-d.active:
@@ -125,10 +138,10 @@ func (d *Device) WriteTo(w io.Writer) (n int64, err error) {
 					err = fmt.Errorf("RecvEx in WriteTo error: %v", er)
 				}
 			}
-
 			return
 		}
-		if nr < 1 || nx < 1 {
+
+		if nr == 0 || nx == 0 {
 			continue
 		}
 
@@ -186,7 +199,7 @@ func (d *Device) WriteTo(w io.Writer) (n int64, err error) {
 		}
 
 		d.Handle.Lock()
-		_, er = d.Handle.SendEx(b[:nr], a[:nx], nil)
+		_, er = d.Handle.SendEx([][]byte{bb}, a[:nx], 0)
 		d.Handle.Unlock()
 		if er != nil && er != ErrHostUnreachable {
 			select {
@@ -194,7 +207,6 @@ func (d *Device) WriteTo(w io.Writer) (n int64, err error) {
 			default:
 				err = fmt.Errorf("SendEx in WriteTo error: %v", er)
 			}
-
 			return
 		}
 	}
@@ -458,7 +470,7 @@ func (d *Device) writeLoop() {
 		case <-t.C:
 			if m > 0 {
 				d.Handle.Lock()
-				_, err := d.Handle.SendEx(b[:n], a[:m], nil)
+				_, err := d.Handle.SendEx([][]byte{b[:n]}, a[:m], 0)
 				d.Handle.Unlock()
 				if err != nil {
 					select {
@@ -489,7 +501,7 @@ func (d *Device) writeLoop() {
 
 			if m == BatchMax {
 				d.Handle.Lock()
-				_, err := d.Handle.SendEx(b[:n], a[:m], nil)
+				_, err := d.Handle.SendEx([][]byte{b[:n]}, a[:m], 0)
 				d.Handle.Unlock()
 				if err != nil {
 					select {

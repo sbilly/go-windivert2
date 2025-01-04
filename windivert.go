@@ -1,5 +1,15 @@
 package windivert
 
+/*
+#include <windows.h>
+#include <windivert.h>
+
+HANDLE getLastError() {
+    return GetLastError();
+}
+*/
+import "C"
+
 import (
 	"fmt"
 	"path/filepath"
@@ -35,11 +45,16 @@ type send struct {
 }
 
 var (
-	winDivert     = (*windows.DLL)(nil)
-	winDivertOpen = (*windows.Proc)(nil)
-	windivertsys  = ""
-	windivertdll  = ""
-	DeviceName    = windows.StringToUTF16Ptr("WinDivert")
+	// WinDivert is the DLL instance
+	WinDivert = (*windows.DLL)(nil)
+	// WinDivertOpen is the WinDivertOpen procedure
+	WinDivertOpen = (*windows.Proc)(nil)
+	// WinDivertSys is the path to WinDivert sys file
+	WinDivertSys = ""
+	// WinDivertDll is the path to WinDivert dll file
+	WinDivertDll = ""
+	// DeviceName is the WinDivert device name
+	DeviceName = windows.StringToUTF16Ptr("WinDivert")
 )
 
 func init() {
@@ -51,15 +66,15 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	windivertsys = filepath.Join(system32, "WinDivert"+strconv.Itoa(32<<(^uint(0)>>63))+".sys")
-	windivertdll = filepath.Join(system32, "WinDivert.dll")
+	WinDivertSys = filepath.Join(system32, "WinDivert"+strconv.Itoa(32<<(^uint(0)>>63))+".sys")
+	WinDivertDll = filepath.Join(system32, "WinDivert.dll")
 
 	if err := InstallDriver(); err != nil {
 		panic(err)
 	}
 
-	winDivert = windows.MustLoadDLL("WinDivert.dll")
-	winDivertOpen = winDivert.MustFindProc("WinDivertOpen")
+	WinDivert = windows.MustLoadDLL("WinDivert.dll")
+	WinDivertOpen = WinDivert.MustFindProc("WinDivertOpen")
 
 	var vers = map[string]struct{}{
 		"2.0": struct{}{},
@@ -131,4 +146,96 @@ func IoControl(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, 
 
 	windows.CloseHandle(event)
 	return
+}
+
+// RecvEx receives multiple packets
+func (h *Handle) RecvEx(packets [][]byte, addrs []Address, flags uint64) (uint, uint, error) {
+	if len(packets) == 0 || len(addrs) == 0 {
+		return 0, 0, fmt.Errorf("empty packets or addresses buffer")
+	}
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	var readLen C.UINT
+	var addrLen C.UINT
+
+	ret := C.WinDivertRecvEx(
+		h.handle,
+		unsafe.Pointer(&packets[0][0]),
+		C.UINT(len(packets[0])*len(packets)),
+		&readLen,
+		C.UINT64(flags),
+		(*C.WINDIVERT_ADDRESS)(unsafe.Pointer(&addrs[0])),
+		&addrLen,
+		nil,
+	)
+
+	if ret == 0 {
+		return 0, 0, getLastError()
+	}
+
+	return uint(readLen), uint(addrLen), nil
+}
+
+// SendEx sends multiple packets
+func (h *Handle) SendEx(packets [][]byte, addrs []Address, flags uint64) (uint, error) {
+	if len(packets) == 0 || len(addrs) == 0 {
+		return 0, fmt.Errorf("empty packets or addresses buffer")
+	}
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	var writeLen C.UINT
+
+	ret := C.WinDivertSendEx(
+		h.handle,
+		unsafe.Pointer(&packets[0][0]),
+		C.UINT(len(packets[0])*len(packets)),
+		&writeLen,
+		C.UINT64(flags),
+		(*C.WINDIVERT_ADDRESS)(unsafe.Pointer(&addrs[0])),
+		C.UINT(len(addrs)),
+		nil,
+	)
+
+	if ret == 0 {
+		return 0, getLastError()
+	}
+
+	return uint(writeLen), nil
+}
+
+// Recv receives a single packet
+func (h *Handle) Recv(packet []byte, addr *Address) (uint, error) {
+	nr, _, err := h.RecvEx([][]byte{packet}, []Address{*addr}, 0)
+	if err != nil {
+		return 0, err
+	}
+	return nr, nil
+}
+
+// SetParam sets a WinDivert parameter
+func (h *Handle) SetParam(param Param, value uint64) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	ret := C.WinDivertSetParam(h.handle, C.WINDIVERT_PARAM(param), C.UINT64(value))
+	if ret == 0 {
+		return getLastError()
+	}
+	return nil
+}
+
+// Shutdown shuts down a WinDivert handle
+func (h *Handle) Shutdown(how ShutdownType) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	ret := C.WinDivertShutdown(h.handle, C.WINDIVERT_SHUTDOWN(how))
+	if ret == 0 {
+		return getLastError()
+	}
+	return nil
 }

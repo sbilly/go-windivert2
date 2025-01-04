@@ -1,5 +1,6 @@
 package windivert
 
+// Layer represents WinDivert layers
 type Layer int
 
 const (
@@ -27,6 +28,7 @@ func (l Layer) String() string {
 	}
 }
 
+// Event represents WinDivert events
 type Event int
 
 const (
@@ -43,57 +45,17 @@ const (
 	EventEthernetFrame   Event = 10
 )
 
-func (e Event) String() string {
-	switch e {
-	case EventNetworkPacket:
-		return "WINDIVERT_EVENT_NETWORK_PACKET"
-	case EventFlowEstablished:
-		return "WINDIVERT_EVENT_FLOW_ESTABLISHED"
-	case EventFlowDeleted:
-		return "WINDIVERT_EVENT_FLOW_DELETED"
-	case EventSocketBind:
-		return "WINDIVERT_EVENT_SOCKET_BIND"
-	case EventSocketConnect:
-		return "WINDIVERT_EVENT_SOCKET_CONNECT"
-	case EventSocketListen:
-		return "WINDIVERT_EVENT_SOCKET_LISTEN"
-	case EventSocketAccept:
-		return "WINDIVERT_EVENT_SOCKET_ACCEPT"
-	case EventSocketClose:
-		return "WINDIVERT_EVENT_SOCKET_CLOSE"
-	case EventReflectOpen:
-		return "WINDIVERT_EVENT_REFLECT_OPEN"
-	case EventReflectClose:
-		return "WINDIVERT_EVENT_REFLECT_CLOSE"
-	case EventEthernetFrame:
-		return "WINDIVERT_EVENT_ETHERNET_FRAME"
-	default:
-		return ""
-	}
-}
-
-type Shutdown int
+// ShutdownType represents WinDivert shutdown types
+type ShutdownType uint32
 
 const (
-	ShutdownRecv Shutdown = 0
-	ShutdownSend Shutdown = 1
-	ShutdownBoth Shutdown = 2
+	ShutdownRecv ShutdownType = 0
+	ShutdownSend ShutdownType = 1
+	ShutdownBoth ShutdownType = 2
 )
 
-func (h Shutdown) String() string {
-	switch h {
-	case ShutdownRecv:
-		return "WINDIVERT_SHUTDOWN_RECV"
-	case ShutdownSend:
-		return "WINDIVERT_SHUTDOWN_SEND"
-	case ShutdownBoth:
-		return "WINDIVERT_SHUTDOWN_BOTH"
-	default:
-		return ""
-	}
-}
-
-type Param int
+// Param represents WinDivert parameters
+type Param uint32
 
 const (
 	QueueLength  Param = 0
@@ -102,23 +64,6 @@ const (
 	VersionMajor Param = 3
 	VersionMinor Param = 4
 )
-
-func (p Param) String() string {
-	switch p {
-	case QueueLength:
-		return "WINDIVERT_PARAM_QUEUE_LENGTH"
-	case QueueTime:
-		return "WINDIVERT_PARAM_QUEUE_TIME"
-	case QueueSize:
-		return "WINDIVERT_PARAM_QUEUE_SIZE"
-	case VersionMajor:
-		return "WINDIVERT_PARAM_VERSION_MAJOR"
-	case VersionMinor:
-		return "WINDIVERT_PARAM_VERSION_MINOR"
-	default:
-		return ""
-	}
-}
 
 // Flags for WinDivertOpen()
 const (
@@ -147,15 +92,19 @@ const (
 )
 
 const (
-	ChecksumDefault  = 0
-	NoIPChecksum     = 1
-	NoICMPChekcsum   = 2
-	NoICMPV6Checksum = 4
-	NoTCPChekcsum    = 8
-	NoUDPChecksum    = 16
-)
-
-const (
 	BatchMax = 0xff
 	MTUMax   = 40 + 0xffff
+)
+
+// CtlCode represents a control code
+type CtlCode uint32
+
+const (
+	CtlCodeInitialize = CtlCode(0x921)
+	CtlCodeStartup    = CtlCode(0x922)
+	CtlCodeRecv       = CtlCode(0x923)
+	CtlCodeSend       = CtlCode(0x924)
+	CtlCodeSetParam   = CtlCode(0x925)
+	CtlCodeGetParam   = CtlCode(0x926)
+	CtlCodeShutdown   = CtlCode(0x927)
 )

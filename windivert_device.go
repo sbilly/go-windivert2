@@ -1,7 +1,5 @@
 package windivert
 
-type CtlCode uint32
-
 const (
 	METHOD_BUFFERED   = 0
 	METHOD_IN_DIRECT  = 1
@@ -54,20 +52,6 @@ func (code CtlCode) String() string {
 	default:
 		return ""
 	}
-}
-
-type IoCtl struct {
-	b1, b2, b3, b4 uint32
-}
-
-type recv struct {
-	Addr       uint64
-	AddrLenPtr uint64
-}
-
-type send struct {
-	Addr    uint64
-	AddrLen uint64
 }
 
 type initialize struct {

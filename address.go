@@ -4,6 +4,17 @@ import (
 	"unsafe"
 )
 
+// PacketInfo contains parsed packet information
+type PacketInfo struct {
+	IPv4Header   *IPv4Header
+	IPv6Header   *IPv6Header
+	ICMPHeader   *ICMPHeader
+	ICMPv6Header *ICMPv6Header
+	TCPHeader    *TCPHeader
+	UDPHeader    *UDPHeader
+	Data         []byte
+}
+
 // Ethernet represents ethernet layer information
 type Ethernet struct {
 	InterfaceIndex    uint32
@@ -95,7 +106,7 @@ func (a *Address) Event() Event {
 
 // SetEvent sets the event type
 func (a *Address) SetEvent(event Event) {
-	a.EventType = uint8(event)
+	a.EventType = Event(event)
 }
 
 // IsSniffed returns whether the packet was sniffed
@@ -174,11 +185,11 @@ func (a *Address) UnsetUDPChecksum() {
 }
 
 func (a *Address) Length() uint32 {
-	return a.length >> 12
+	return uint32(a.length >> 12)
 }
 
 func (a *Address) SetLength(n uint32) {
-	a.length = n << 12
+	a.length = uint64(n << 12)
 }
 
 func (a *Address) Ethernet() *Ethernet {
