@@ -13,6 +13,34 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// CtlCode represents a control code
+type CtlCode uint32
+
+// IoCtl represents an IO control structure
+type IoCtl struct {
+	// ... fields
+}
+
+// recv represents a receive operation
+type recv struct {
+	Addr       uint64
+	AddrLenPtr uint64
+}
+
+// send represents a send operation
+type send struct {
+	Addr    uint64
+	AddrLen uint64
+}
+
+// Error represents a WinDivert error
+type Error syscall.Errno
+
+// Error returns the error string
+func (e Error) Error() string {
+	return syscall.Errno(e).Error()
+}
+
 var (
 	winDivert     = (*windows.DLL)(nil)
 	winDivertOpen = (*windows.Proc)(nil)

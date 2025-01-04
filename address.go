@@ -4,6 +4,65 @@ import (
 	"unsafe"
 )
 
+// Ethernet represents ethernet layer information
+type Ethernet struct {
+	InterfaceIndex    uint32
+	SubInterfaceIndex uint32
+	_                 [7]uint64
+}
+
+// Network represents network layer information
+type Network struct {
+	InterfaceIndex    uint32
+	SubInterfaceIndex uint32
+	_                 [7]uint64
+}
+
+// Socket represents socket layer information
+type Socket struct {
+	EndpointID       uint64
+	ParentEndpointID uint64
+	ProcessID        uint32
+	LocalAddress     [16]uint8
+	RemoteAddress    [16]uint8
+	LocalPort        uint16
+	RemotePort       uint16
+	Protocol         uint8
+	_                [3]uint8
+	_                uint32
+}
+
+// Flow represents flow layer information
+type Flow struct {
+	EndpointID       uint64
+	ParentEndpointID uint64
+	ProcessID        uint32
+	LocalAddress     [16]uint8
+	RemoteAddress    [16]uint8
+	LocalPort        uint16
+	RemotePort       uint16
+	Protocol         uint8
+	_                [3]uint8
+	_                uint32
+}
+
+// Reflect represents reflect layer information
+type Reflect struct {
+	TimeStamp int64
+	ProcessID uint32
+	layer     uint32
+	Flags     uint64
+	Priority  int16
+	_         int16
+	_         int32
+	_         [4]uint64
+}
+
+// Layer returns the layer type for reflect information
+func (r *Reflect) Layer() Layer {
+	return Layer(r.layer)
+}
+
 // Address represents a WinDivert address
 type Address struct {
 	Timestamp      int64

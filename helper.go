@@ -5,6 +5,14 @@ import (
 	"unsafe"
 )
 
+/*
+#cgo CFLAGS: -I${SRCDIR}/include
+#cgo LDFLAGS: -L${SRCDIR}/lib -lwindivert
+#include <windivert.h>
+#include <stdlib.h>
+*/
+import "C"
+
 // CalcChecksums calculates checksums for the packet
 func CalcChecksums(packet []byte, addr *Address, flags uint64) error {
 	if len(packet) == 0 {
