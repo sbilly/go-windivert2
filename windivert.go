@@ -1,7 +1,6 @@
 package windivert
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -187,37 +186,6 @@ func (h *Handle) Close() error {
 	windows.CloseHandle(h.wOverlapped.HEvent)
 
 	err := windows.CloseHandle(h.Handle)
-	if err != nil {
-		return Error(err.(syscall.Errno))
-	}
-
-	return nil
-}
-
-func (h *Handle) SetParam(p Param, v uint64) error {
-	switch p {
-	case QueueLength:
-		if v < QueueLengthMin || v > QueueLengthMax {
-			return fmt.Errorf("Queue length %v is not correct, Max: %v, Min: %v", v, QueueLengthMax, QueueLengthMin)
-		}
-	case QueueTime:
-		if v < QueueTimeMin || v > QueueTimeMax {
-			return fmt.Errorf("Queue time %v is not correct, Max: %v, Min: %v", v, QueueTimeMax, QueueTimeMin)
-		}
-	case QueueSize:
-		if v < QueueSizeMin || v > QueueSizeMax {
-			return fmt.Errorf("Queue size %v is not correct, Max: %v, Min: %v", v, QueueSizeMax, QueueSizeMin)
-		}
-	default:
-		return errors.New("VersionMajor and VersionMinor only can be used in function GetParam")
-	}
-
-	setParam := setParam{
-		Value: v,
-		Param: uint32(p),
-	}
-
-	_, err := IoControl(h.Handle, IoCtlSetParam, unsafe.Pointer(&setParam), nil, 0)
 	if err != nil {
 		return Error(err.(syscall.Errno))
 	}

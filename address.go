@@ -4,178 +4,112 @@ import (
 	"unsafe"
 )
 
-type Ethernet struct {
-	InterfaceIndex    uint32
-	SubInterfaceIndex uint32
-	_                 [7]uint64
-}
-
-type Network struct {
-	InterfaceIndex    uint32
-	SubInterfaceIndex uint32
-	_                 [7]uint64
-}
-
-type Socket struct {
-	EndpointID       uint64
-	ParentEndpointID uint64
-	ProcessID        uint32
-	LocalAddress     [16]uint8
-	RemoteAddress    [16]uint8
-	LocalPort        uint16
-	RemotePort       uint16
-	Protocol         uint8
-	_                [3]uint8
-	_                uint32
-}
-
-type Flow struct {
-	EndpointID       uint64
-	ParentEndpointID uint64
-	ProcessID        uint32
-	LocalAddress     [16]uint8
-	RemoteAddress    [16]uint8
-	LocalPort        uint16
-	RemotePort       uint16
-	Protocol         uint8
-	_                [3]uint8
-	_                uint32
-}
-
-type Reflect struct {
-	TimeStamp int64
-	ProcessID uint32
-	layer     uint32
-	Flags     uint64
-	Priority  int16
-	_         int16
-	_         int32
-	_         [4]uint64
-}
-
-func (r *Reflect) Layer() Layer {
-	return Layer(r.layer)
-}
-
+// Address represents a WinDivert address
 type Address struct {
-	Timestamp   int64
-	Layer       Layer
-	Event       uint8
-	Sniffed     uint8
-	Outbound    uint8
-	IPChecksum  uint8
-	TCPChecksum uint8
-	UDPChecksum uint8
+	Timestamp      int64
+	LayerType      Layer // renamed from Layer
+	EventType      Event // renamed from Event
+	IsSniffed      uint8 // renamed from Sniffed
+	IsOutbound     uint8 // renamed from Outbound
+	HasIPChecksum  uint8 // renamed from IPChecksum
+	HasTCPChecksum uint8 // renamed from TCPChecksum
+	HasUDPChecksum uint8 // renamed from UDPChecksum
+	Flags          uint8
+	union          [64]byte
+	length         uint64
 }
 
+// GetLayer returns the layer type
 func (a *Address) Layer() Layer {
-	return a.Layer
+	return a.LayerType
 }
 
+// SetLayer sets the layer type
 func (a *Address) SetLayer(layer Layer) {
-	a.Layer = layer
+	a.LayerType = layer
 }
 
+// GetEvent returns the event type
 func (a *Address) Event() Event {
-	return Event(a.Event)
+	return Event(a.EventType)
 }
 
+// SetEvent sets the event type
 func (a *Address) SetEvent(event Event) {
-	a.Event = uint8(event)
+	a.EventType = uint8(event)
 }
 
+// IsSniffed returns whether the packet was sniffed
 func (a *Address) Sniffed() bool {
 	return (a.Flags & uint8(0x01<<0)) == uint8(0x01<<0)
 }
 
+// SetSniffed sets the sniffed flag
 func (a *Address) SetSniffed() {
 	a.Flags |= uint8(0x01 << 0)
 }
 
+// UnsetSniffed unsets the sniffed flag
 func (a *Address) UnsetSniffed() {
 	a.Flags &= ^uint8(0x01 << 0)
 }
 
+// IsOutbound returns whether the packet is outbound
 func (a *Address) Outbound() bool {
 	return (a.Flags & uint8(0x01<<1)) == uint8(0x01<<1)
 }
 
+// SetOutbound sets the outbound flag
 func (a *Address) SetOutbound() {
 	a.Flags |= uint8(0x01 << 1)
 }
 
+// UnsetOutbound unsets the outbound flag
 func (a *Address) UnsetOutbound() {
 	a.Flags &= ^uint8(0x01 << 1)
 }
 
-func (a *Address) Loopback() bool {
-	return (a.Flags & uint8(0x01<<2)) == uint8(0x01<<2)
-}
-
-func (a *Address) SetLoopback() {
-	a.Flags |= uint8(0x01 << 2)
-}
-
-func (a *Address) UnsetLoopback() {
-	a.Flags &= ^uint8(0x01 << 2)
-}
-
-func (a *Address) Impostor() bool {
-	return (a.Flags & uint8(0x01<<3)) == uint8(0x01<<3)
-}
-
-func (a *Address) SetImpostor() {
-	a.Flags |= uint8(0x01 << 3)
-}
-
-func (a *Address) UnsetImpostor() {
-	a.Flags &= ^uint8(0x01 << 3)
-}
-
-func (a *Address) IPv6() bool {
-	return (a.Flags & uint8(0x01<<4)) == uint8(0x01<<4)
-}
-
-func (a *Address) SetIPv6() {
-	a.Flags |= uint8(0x01 << 4)
-}
-
-func (a *Address) UnsetIPv6() {
-	a.Flags &= ^uint8(0x01 << 4)
-}
-
+// HasIPChecksum returns whether IP checksum is present
 func (a *Address) IPChecksum() bool {
 	return (a.Flags & uint8(0x01<<5)) == uint8(0x01<<5)
 }
 
+// SetIPChecksum sets the IP checksum flag
 func (a *Address) SetIPChecksum() {
 	a.Flags |= uint8(0x01 << 5)
 }
 
+// UnsetIPChecksum unsets the IP checksum flag
 func (a *Address) UnsetIPChecksum() {
 	a.Flags &= ^uint8(0x01 << 5)
 }
 
+// HasTCPChecksum returns whether TCP checksum is present
 func (a *Address) TCPChecksum() bool {
 	return (a.Flags & uint8(0x01<<6)) == uint8(0x01<<6)
 }
 
+// SetTCPChecksum sets the TCP checksum flag
 func (a *Address) SetTCPChecksum() {
 	a.Flags |= uint8(0x01 << 6)
 }
 
+// UnsetTCPChecksum unsets the TCP checksum flag
 func (a *Address) UnsetTCPChecksum() {
 	a.Flags &= ^uint8(0x01 << 6)
 }
 
+// HasUDPChecksum returns whether UDP checksum is present
 func (a *Address) UDPChecksum() bool {
 	return (a.Flags & uint8(0x01<<7)) == uint8(0x01<<7)
 }
 
+// SetUDPChecksum sets the UDP checksum flag
 func (a *Address) SetUDPChecksum() {
 	a.Flags |= uint8(0x01 << 7)
 }
 
+// UnsetUDPChecksum unsets the UDP checksum flag
 func (a *Address) UnsetUDPChecksum() {
 	a.Flags &= ^uint8(0x01 << 7)
 }
