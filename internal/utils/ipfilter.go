@@ -1,72 +1,25 @@
 package utils
 
-import (
-	"net"
-	"sync"
+import "net"
 
-	"github.com/imgk/shadow/utils/iptree"
-)
-
+// IPFilter represents an IP filter
 type IPFilter struct {
-	sync.RWMutex
-	Tree *iptree.Tree
+	tree *IPTree
 }
 
+// NewIPFilter creates a new IP filter
 func NewIPFilter() *IPFilter {
-	f := &IPFilter{
-		RWMutex: sync.RWMutex{},
-		Tree:    iptree.NewTree(),
+	return &IPFilter{
+		tree: NewIPTree(),
 	}
-
-	return f
 }
 
-func (f *IPFilter) Reset() {
-	f.Lock()
-	f.UnsafeReset()
-	f.Unlock()
+// Add adds an IP address to the filter
+func (f *IPFilter) Add(ip net.IP) {
+	f.tree.Insert(ip)
 }
 
-func (f *IPFilter) UnsafeReset() {
-	f.Tree = iptree.NewTree()
-}
-
-func (f *IPFilter) Add(s string) error {
-	f.Lock()
-	err := f.UnsafeAdd(s)
-	f.Unlock()
-
-	return err
-}
-
-func (f *IPFilter) UnsafeAdd(s string) error {
-	ip := net.ParseIP(s)
-	if ip != nil {
-		return f.addIP(ip)
-	}
-
-	_, ipNet, err := net.ParseCIDR(s)
-	if err != nil {
-		return err
-	}
-
-	return f.addCIDR(ipNet)
-}
-
-func (f *IPFilter) addIP(ip net.IP) error {
-	f.Tree.InplaceInsertIP(ip, nil)
-	return nil
-}
-
-func (f *IPFilter) addCIDR(ip *net.IPNet) error {
-	f.Tree.InplaceInsertNet(ip, nil)
-	return nil
-}
-
+// Lookup checks if an IP address exists in the filter
 func (f *IPFilter) Lookup(ip net.IP) bool {
-	f.RLock()
-	_, ok := f.Tree.GetByIP(ip)
-	f.RUnlock()
-
-	return ok
+	return f.tree.Lookup(ip)
 }
