@@ -3,11 +3,8 @@ package windivert
 import (
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
-	"sync"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -35,14 +32,6 @@ type recv struct {
 type send struct {
 	Addr    uint64
 	AddrLen uint64
-}
-
-// Error represents a WinDivert error
-type Error syscall.Errno
-
-// Error returns the error string
-func (e Error) Error() string {
-	return syscall.Errno(e).Error()
 }
 
 var (
@@ -142,85 +131,4 @@ func IoControl(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, 
 
 	windows.CloseHandle(event)
 	return
-}
-
-type Handle struct {
-	sync.Mutex
-	windows.Handle
-	rOverlapped windows.Overlapped
-	wOverlapped windows.Overlapped
-}
-
-func Open(filter string, layer Layer, priority int16, flags uint64) (*Handle, error) {
-	if priority < PriorityLowest || priority > PriorityHighest {
-		return nil, fmt.Errorf("Priority %v is not Correct, Max: %v, Min: %v", priority, PriorityHighest, PriorityLowest)
-	}
-
-	filterPtr, err := windows.BytePtrFromString(filter)
-	if err != nil {
-		return nil, err
-	}
-
-	runtime.LockOSThread()
-	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags))
-	runtime.UnlockOSThread()
-
-	if windows.Handle(hd) == windows.InvalidHandle {
-		return nil, Error(err.(windows.Errno))
-	}
-
-	rEvent, _ := windows.CreateEvent(nil, 0, 0, nil)
-	wEvent, _ := windows.CreateEvent(nil, 0, 0, nil)
-
-	return &Handle{
-		Mutex:  sync.Mutex{},
-		Handle: windows.Handle(hd),
-		rOverlapped: windows.Overlapped{
-			HEvent: rEvent,
-		},
-		wOverlapped: windows.Overlapped{
-			HEvent: wEvent,
-		},
-	}, nil
-}
-
-func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
-	addrLen := uint(unsafe.Sizeof(Address{}))
-	recv := recv{
-		Addr:       uint64(uintptr(unsafe.Pointer(address))),
-		AddrLenPtr: uint64(uintptr(unsafe.Pointer(&addrLen))),
-	}
-
-	iolen, err := IoControlEx(h.Handle, IoCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
-	if err != nil {
-		return uint(iolen), Error(err.(syscall.Errno))
-	}
-
-	return uint(iolen), nil
-}
-
-func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
-	send := send{
-		Addr:    uint64(uintptr(unsafe.Pointer(address))),
-		AddrLen: uint64(unsafe.Sizeof(Address{})),
-	}
-
-	iolen, err := IoControlEx(h.Handle, IoCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
-	if err != nil {
-		return uint(iolen), Error(err.(syscall.Errno))
-	}
-
-	return uint(iolen), nil
-}
-
-func (h *Handle) Close() error {
-	windows.CloseHandle(h.rOverlapped.HEvent)
-	windows.CloseHandle(h.wOverlapped.HEvent)
-
-	err := windows.CloseHandle(h.Handle)
-	if err != nil {
-		return Error(err.(syscall.Errno))
-	}
-
-	return nil
 }
