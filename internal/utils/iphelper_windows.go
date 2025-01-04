@@ -1,54 +1,23 @@
+//go:build windows
 // +build windows
 
 package utils
 
 import (
-	"reflect"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
-)
-
-const (
-	TCP_TABLE_OWNER_PID_LISTENER       = 3
-	TCP_TABLE_OWNER_PID_CONNECTIONS    = 4
-	TCP_TABLE_OWNER_PID_ALL            = 5
-	TCP_TABLE_OWNER_MODULE_LISTENER    = 6
-	TCP_TABLE_OWNER_MODULE_CONNECTIONS = 7
-	TCP_TABLE_OWNER_MODULE_ALL         = 8
-
-	UDP_TABLE_OWNER_PID    = 1
-	UDP_TABLE_OWNER_MODULE = 2
 )
 
 var (
-	iphlpapi            = windows.MustLoadDLL("iphlpapi.dll")
-	getExtendedTcpTable = iphlpapi.MustFindProc("GetExtendedTcpTable")
-	getExtendedUdpTable = iphlpapi.MustFindProc("GetExtendedUdpTable")
+	modiphlpapi = syscall.NewLazyDLL("iphlpapi.dll")
+
+	procGetTcpTable2 = modiphlpapi.NewProc("GetTcpTable2")
+	procGetUdpTable  = modiphlpapi.NewProc("GetUdpTable")
+	procGetTcp6Table = modiphlpapi.NewProc("GetTcp6Table")
+	procGetUdp6Table = modiphlpapi.NewProc("GetUdp6Table")
 )
 
-func GetTCPTable() ([]TCPRow, error) {
-	b, err := GetExtendedTcpTable(0, windows.AF_INET, TCP_TABLE_OWNER_PID_CONNECTIONS)
-	if err != nil {
-		return nil, err
-	}
-
-	t := (*TCPTable)(unsafe.Pointer(&b[0]))
-
-	h := &reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(&t.table)),
-		Len:  int(t.n),
-		Cap:  int(t.n),
-	}
-
-	return *(*[]TCPRow)(unsafe.Pointer(h)), nil
-}
-
-type TCPTable struct {
-	n     uint32
-	table [1]TCPRow
-}
-
+// TCPRow represents a TCP connection entry
 type TCPRow struct {
 	State      uint32
 	LocalAddr  uint32
@@ -58,168 +27,158 @@ type TCPRow struct {
 	OwningPid  uint32
 }
 
-func GetTCP6Table() ([]TCP6Row, error) {
-	b, err := GetExtendedTcpTable(0, windows.AF_INET6, TCP_TABLE_OWNER_PID_CONNECTIONS)
-	if err != nil {
-		return nil, err
-	}
-
-	t := (*TCP6Table)(unsafe.Pointer(&b[0]))
-
-	h := &reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(&t.table)),
-		Len:  int(t.n),
-		Cap:  int(t.n),
-	}
-
-	return *(*[]TCP6Row)(unsafe.Pointer(h)), nil
-}
-
-type TCP6Table struct {
-	n     uint32
-	table [1]TCP6Row
-}
-
+// TCP6Row represents a TCP IPv6 connection entry
 type TCP6Row struct {
-	LocalAddr     [4]uint32
-	LocalScopeId  uint32
-	LocalPort     uint32
-	RemoteAddr    [4]uint32
-	RemoteScopeId uint32
-	RemotePort    uint32
-	State         uint32
-	OwningPid     uint32
+	LocalAddr  [4]uint32
+	LocalPort  uint32
+	RemoteAddr [4]uint32
+	RemotePort uint32
+	State      uint32
+	OwningPid  uint32
 }
 
-func GetExtendedTcpTable(order uint32, ulAf uint32, tableClass uint32) ([]byte, error) {
-	var buffer []byte
-	var pTcpTable *byte
-	var dwSize uint32
-
-	for {
-		// DWORD GetExtendedTcpTable(
-		//  PVOID           pTcpTable,
-		//  PDWORD          pdwSize,
-		//  BOOL            bOrder,
-		//  ULONG           ulAf,
-		//  TCP_TABLE_CLASS TableClass,
-		//  ULONG           Reserved
-		// );
-		// https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getextendedtcptable
-		ret, _, errno := getExtendedTcpTable.Call(
-			uintptr(unsafe.Pointer(pTcpTable)),
-			uintptr(unsafe.Pointer(&dwSize)),
-			uintptr(order),
-			uintptr(ulAf),
-			uintptr(tableClass),
-			uintptr(uint32(0)),
-		)
-
-		if ret != windows.NO_ERROR {
-			if windows.Errno(ret) == windows.ERROR_INSUFFICIENT_BUFFER {
-				buffer = make([]byte, dwSize)
-				pTcpTable = &buffer[0]
-				continue
-			}
-
-			return nil, errno
-		}
-
-		return buffer, nil
-	}
-}
-
-func GetUDPTable() ([]UDPRow, error) {
-	b, err := GetExtendedUdpTable(0, windows.AF_INET, UDP_TABLE_OWNER_PID)
-	if err != nil {
-		return nil, err
-	}
-
-	t := (*UDPTable)(unsafe.Pointer(&b[0]))
-
-	h := &reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(&t.table)),
-		Len:  int(t.n),
-		Cap:  int(t.n),
-	}
-
-	return *(*[]UDPRow)(unsafe.Pointer(h)), nil
-}
-
-type UDPTable struct {
-	n     uint32
-	table [1]UDPRow
-}
-
+// UDPRow represents a UDP connection entry
 type UDPRow struct {
 	LocalAddr uint32
 	LocalPort uint32
 	OwningPid uint32
 }
 
-func GetUDP6Table() ([]UDP6Row, error) {
-	b, err := GetExtendedUdpTable(0, windows.AF_INET6, UDP_TABLE_OWNER_PID)
-	if err != nil {
+// UDP6Row represents a UDP IPv6 connection entry
+type UDP6Row struct {
+	LocalAddr [4]uint32
+	LocalPort uint32
+	OwningPid uint32
+}
+
+// GetTCPTable retrieves the TCP connection table
+func GetTCPTable() ([]TCPRow, error) {
+	var size uint32
+	var tcpTable []byte
+
+	// Get the size of the table
+	r1, _, err := procGetTcpTable2.Call(0, uintptr(unsafe.Pointer(&size)), 1)
+	if r1 != 0 && err != syscall.ERROR_INSUFFICIENT_BUFFER {
 		return nil, err
 	}
 
-	t := (*UDP6Table)(unsafe.Pointer(&b[0]))
-
-	h := &reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(&t.table)),
-		Len:  int(t.n),
-		Cap:  int(t.n),
+	tcpTable = make([]byte, size)
+	r1, _, err = procGetTcpTable2.Call(
+		uintptr(unsafe.Pointer(&tcpTable[0])),
+		uintptr(unsafe.Pointer(&size)),
+		1,
+	)
+	if r1 != 0 {
+		return nil, err
 	}
 
-	return *(*[]UDP6Row)(unsafe.Pointer(h)), nil
-}
+	count := *(*uint32)(unsafe.Pointer(&tcpTable[0]))
+	rows := make([]TCPRow, count)
 
-type UDP6Table struct {
-	n     uint32
-	table [1]UDP6Row
-}
-
-type UDP6Row struct {
-	LocalAddr    [4]uint32
-	LocalScopeId uint32
-	LocalPort    uint32
-	OwningPid    uint32
-}
-
-func GetExtendedUdpTable(order uint32, ulAf uint32, tableClass uint32) ([]byte, error) {
-	var buffer []byte
-	var pUdpTable *byte
-	var dwSize uint32
-
-	for {
-		// DWORD GetExtendedUdpTable(
-		//  PVOID           pUdpTable,
-		//  PDWORD          pdwSize,
-		//  BOOL            bOrder,
-		//  ULONG           ulAf,
-		//  UDP_TABLE_CLASS TableClass,
-		//  ULONG           Reserved
-		// );
-		// https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getextendedudptable
-		ret, _, errno := getExtendedUdpTable.Call(
-			uintptr(unsafe.Pointer(pUdpTable)),
-			uintptr(unsafe.Pointer(&dwSize)),
-			uintptr(order),
-			uintptr(ulAf),
-			uintptr(tableClass),
-			uintptr(uint32(0)),
-		)
-
-		if ret != windows.NO_ERROR {
-			if windows.Errno(ret) == windows.ERROR_INSUFFICIENT_BUFFER {
-				buffer = make([]byte, dwSize)
-				pUdpTable = &buffer[0]
-				continue
-			}
-
-			return nil, errno
-		}
-
-		return buffer, nil
+	for i := uint32(0); i < count; i++ {
+		offset := 4 + i*uint32(unsafe.Sizeof(TCPRow{}))
+		row := (*TCPRow)(unsafe.Pointer(&tcpTable[offset]))
+		rows[i] = *row
 	}
+
+	return rows, nil
+}
+
+// GetUDPTable retrieves the UDP connection table
+func GetUDPTable() ([]UDPRow, error) {
+	var size uint32
+	var udpTable []byte
+
+	// Get the size of the table
+	r1, _, err := procGetUdpTable.Call(0, uintptr(unsafe.Pointer(&size)), 1)
+	if r1 != 0 && err != syscall.ERROR_INSUFFICIENT_BUFFER {
+		return nil, err
+	}
+
+	udpTable = make([]byte, size)
+	r1, _, err = procGetUdpTable.Call(
+		uintptr(unsafe.Pointer(&udpTable[0])),
+		uintptr(unsafe.Pointer(&size)),
+		1,
+	)
+	if r1 != 0 {
+		return nil, err
+	}
+
+	count := *(*uint32)(unsafe.Pointer(&udpTable[0]))
+	rows := make([]UDPRow, count)
+
+	for i := uint32(0); i < count; i++ {
+		offset := 4 + i*uint32(unsafe.Sizeof(UDPRow{}))
+		row := (*UDPRow)(unsafe.Pointer(&udpTable[offset]))
+		rows[i] = *row
+	}
+
+	return rows, nil
+}
+
+// GetTCP6Table retrieves the TCP IPv6 connection table
+func GetTCP6Table() ([]TCP6Row, error) {
+	var size uint32
+	var tcp6Table []byte
+
+	// Get the size of the table
+	r1, _, err := procGetTcp6Table.Call(0, uintptr(unsafe.Pointer(&size)), 1)
+	if r1 != 0 && err != syscall.ERROR_INSUFFICIENT_BUFFER {
+		return nil, err
+	}
+
+	tcp6Table = make([]byte, size)
+	r1, _, err = procGetTcp6Table.Call(
+		uintptr(unsafe.Pointer(&tcp6Table[0])),
+		uintptr(unsafe.Pointer(&size)),
+		1,
+	)
+	if r1 != 0 {
+		return nil, err
+	}
+
+	count := *(*uint32)(unsafe.Pointer(&tcp6Table[0]))
+	rows := make([]TCP6Row, count)
+
+	for i := uint32(0); i < count; i++ {
+		offset := 4 + i*uint32(unsafe.Sizeof(TCP6Row{}))
+		row := (*TCP6Row)(unsafe.Pointer(&tcp6Table[offset]))
+		rows[i] = *row
+	}
+
+	return rows, nil
+}
+
+// GetUDP6Table retrieves the UDP IPv6 connection table
+func GetUDP6Table() ([]UDP6Row, error) {
+	var size uint32
+	var udp6Table []byte
+
+	// Get the size of the table
+	r1, _, err := procGetUdp6Table.Call(0, uintptr(unsafe.Pointer(&size)), 1)
+	if r1 != 0 && err != syscall.ERROR_INSUFFICIENT_BUFFER {
+		return nil, err
+	}
+
+	udp6Table = make([]byte, size)
+	r1, _, err = procGetUdp6Table.Call(
+		uintptr(unsafe.Pointer(&udp6Table[0])),
+		uintptr(unsafe.Pointer(&size)),
+		1,
+	)
+	if r1 != 0 {
+		return nil, err
+	}
+
+	count := *(*uint32)(unsafe.Pointer(&udp6Table[0]))
+	rows := make([]UDP6Row, count)
+
+	for i := uint32(0); i < count; i++ {
+		offset := 4 + i*uint32(unsafe.Sizeof(UDP6Row{}))
+		row := (*UDP6Row)(unsafe.Pointer(&udp6Table[offset]))
+		rows[i] = *row
+	}
+
+	return rows, nil
 }
