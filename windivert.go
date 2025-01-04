@@ -168,21 +168,6 @@ func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
-func (h *Handle) RecvEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, uint, error) {
-	addrLen := uint(len(address)) * uint(unsafe.Sizeof(Address{}))
-	recv := recv{
-		Addr:       uint64(uintptr(unsafe.Pointer(&address[0]))),
-		AddrLenPtr: uint64(uintptr(unsafe.Pointer(&addrLen))),
-	}
-
-	iolen, err := IoControlEx(h.Handle, IoCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
-	if err != nil {
-		return uint(iolen), addrLen / uint(unsafe.Sizeof(Address{})), Error(err.(syscall.Errno))
-	}
-
-	return uint(iolen), addrLen / uint(unsafe.Sizeof(Address{})), nil
-}
-
 func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	send := send{
 		Addr:    uint64(uintptr(unsafe.Pointer(address))),
@@ -197,33 +182,6 @@ func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
-func (h *Handle) SendEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, error) {
-	send := send{
-		Addr:    uint64(uintptr(unsafe.Pointer(&address[0]))),
-		AddrLen: uint64(unsafe.Sizeof(Address{})) * uint64(len(address)),
-	}
-
-	iolen, err := IoControlEx(h.Handle, IoCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
-	if err != nil {
-		return uint(iolen), Error(err.(syscall.Errno))
-	}
-
-	return uint(iolen), nil
-}
-
-func (h *Handle) Shutdown(how Shutdown) error {
-	shutdown := shutdown{
-		How: uint32(how),
-	}
-
-	_, err := IoControl(h.Handle, IoCtlShutdown, unsafe.Pointer(&shutdown), nil, 0)
-	if err != nil {
-		return Error(err.(syscall.Errno))
-	}
-
-	return nil
-}
-
 func (h *Handle) Close() error {
 	windows.CloseHandle(h.rOverlapped.HEvent)
 	windows.CloseHandle(h.wOverlapped.HEvent)
@@ -234,20 +192,6 @@ func (h *Handle) Close() error {
 	}
 
 	return nil
-}
-
-func (h *Handle) GetParam(p Param) (uint64, error) {
-	getParam := getParam{
-		Param: uint32(p),
-		Value: 0,
-	}
-
-	_, err := IoControl(h.Handle, IoCtlGetParam, unsafe.Pointer(&getParam), (*byte)(unsafe.Pointer(&getParam.Value)), uint32(unsafe.Sizeof(getParam.Value)))
-	if err != nil {
-		return getParam.Value, Error(err.(syscall.Errno))
-	}
-
-	return getParam.Value, nil
 }
 
 func (h *Handle) SetParam(p Param, v uint64) error {
